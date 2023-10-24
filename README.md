@@ -1,21 +1,21 @@
-# Youpk: 又一款基于ART的主动调用的脱壳机
-## 已开源
-预祝大家儿童节快乐
-仓库地址: https://github.com/youlor/unpacker, 欢迎各位大佬star.
+# Youpk: Another ART-based active call huller
+## Open sourced
+Happy Children's Day to all
+Warehouse address: https://github.com/youlor/unpacker, welcome to the big guy star.
 
-## 原理
+## Principle
 
-Youpk是一款针对Dex整体加固+各式各样的Dex抽取的脱壳机
+Youpk is a shelling machine for Dex overall reinforcement + various Dex extraction
 
-基本流程如下:
+The basic process is as follows:
 
-1. 从内存中dump DEX
-2. 构造完整调用链, 主动调用所有方法并dump CodeItem
-3. 合并 DEX, CodeItem
+1. Dump DEX from memory
+2. Construct the complete call chain, actively call all methods and dump CodeItem
+3. Merge DEX, CodeItem
 
-### 从内存中dump DEX
+### Dump DEX from memory
 
-DEX文件在art虚拟机中使用DexFile对象表示, 而ClassLinker中引用了这些对象, 因此可以采用从ClassLinker中遍历DexFile对象并dump的方式来获取.
+DEX files are represented in the art virtual machine using DexFile objects, and these objects are referenced in ClassLinker, so they can be obtained by traversing DexFile objects from ClassLinker and dumping.
 
 ```c++
 //unpacker.cc
@@ -34,7 +34,7 @@ std::list<const DexFile*> Unpacker::getDexFiles() {
 }
 ```
 
-另外, 为了避免dex做任何形式的优化影响dump下来的dex文件, 在dex2oat中设置 CompilerFilter 为仅验证
+In addition, to avoid any form of optimization affecting the dumped dex file, set CompilerFilter to verify only in dex2oat
 
 ```c++
 //dex2oat.cc
@@ -43,9 +43,9 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
 
 
 
-### 构造完整调用链, 主动调用所有方法
+### Construct the complete call chain, actively calling all methods
 
-1. 创建脱壳线程
+1. Create a shelling thread
 
    ```java
    //unpacker.java
@@ -54,7 +54,7 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
            return;
        }
    
-       //开启线程调用
+       //Turn on thread calls
        Unpacker.unpackerThread = new Thread() {
            @Override public void run() {
                while (true) {
@@ -74,14 +74,14 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
    }
    ```
 
-2. 在脱壳线程中遍历DexFile的所有ClassDef
+2. Iterate through all of DexFile's ClassDefs in a shelling thread
 
    ```c++
    //unpacker.cc
    for (; class_idx < dex_file->NumClassDefs(); class_idx++) {
    ```
 
-3. 解析并初始化Class
+3. Parse and initialize the Class
 
    ```c++
    //unpacker.cc
@@ -91,7 +91,7 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
    bool suc = class_linker->EnsureInitialized(self, h_class, true, true);
    ```
 
-4. 主动调用Class的所有Method, 并修改ArtMethod::Invoke使其强制走switch型解释器
+4. Actively call all methods of the class, and modify ArtMethod::Invoke to force the switch interpreter
 
    ```c++
    //art_method.cc
@@ -112,7 +112,7 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
    static constexpr InterpreterImplKind kInterpreterImplKind = kSwitchImplKind;
    ```
 
-5. 在解释器中插桩, 在每条指令执行前设置回调
+5. Instrumentation in the interpreter and setting callbacks before each instruction is executed
 
    ```c++
    //interpreter_switch_impl.cc
@@ -131,8 +131,7 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
      } while (false)
    ```
 
-6. 在回调中做针对性的CodeItem的dump, 这里仅仅是简单的示例了直接dump, 实际上, 针对某些厂商的抽取, 可以真正的执行几条指令等待CodeItem解密后再dump
-
+6. Do targeted CodeItem dump in the callback, here is just a simple example of direct dump, in fact, for some manufacturers' extraction, you can really execute a few instructions to wait for CodeItem decryption before dumping
    ```c++
    //unpacker.cc
    bool Unpacker::beforeInstructionExecute(Thread *self, ArtMethod *method, uint32_t dex_pc, int inst_count) {
@@ -146,51 +145,47 @@ compiler_options_->SetCompilerFilter(CompilerFilter::kVerifyAtRuntime);
 
 
 
-### 合并 DEX, CodeItem
+### Merge DEX, CodeItem
 
-将dump下来的CodeItem填充到DEX的相应位置中即可. 主要是基于google dx工具修改.
+Fill the dumped CodeItem in the corresponding position of the DEX. Mainly based on Google DX tool modifications.
 
-
-
-### 参考链接
+### Reference link
 
 FUPK3: https://bbs.pediy.com/thread-246117.htm
 
 FART: https://bbs.pediy.com/thread-252630.htm
 
+## Flash
 
+1. Only support Pixel 1 generation
+2. Reboot to bootloader: 'adb reboot bootloader'
+3. Unzip Youpk_sailfish.zip and double-click 'flash-all.bat' 
 
-## 刷机
-
-1. 仅支持pixel 1代
-2. 重启至bootloader: `adb reboot bootloader`
-3. 解压 Youpk_sailfish.zip 并双击 `flash-all.bat` 
-
-百度云：https://pan.baidu.com/s/1nUC5PpYGEBvkuvV-82pluA 
-提取码：sc82 
+Baidu Cloud: https://pan.baidu.com/s/1nUC5PpYGEBvkuvV-82pluA 
+Extraction code: SC82 
 
 
 
-## 使用方法
+## Usage
 
-1. **该工具仅仅用来学习交流, 请勿用于非法用途, 否则后果自付！**
+1. **This tool is only for learning communication, please do not use it for illegal purposes, otherwise you will pay the consequences! **
    
-2. 配置待脱壳的app包名, 准确来讲是进程名称
+2. Configure the name of the app package to be shelled, which is the process name to be precise
 
     ```bash
     adb shell "echo cn.youlor.mydemo >> /data/local/tmp/unpacker.config"
     ```
 
-3. 启动apk等待脱壳
-    每隔10秒将自动重新脱壳(已完全dump的dex将被忽略), 当日志打印unpack end时脱壳完成
+3. Launch the apk and wait for the shelling
+    Shelling is automatically re-shelled every 10 seconds (dex that has been completely dumped will be ignored), and the shelling is complete when the log prints unpack end
 
-4. pull出dump文件, dump文件路径为 `/data/data/包名/unpacker` 
+4. Pull out the dump file, the dump file path is '/data/data/package name/unpacker' 
 
     ```bash
     adb pull /data/data/cn.youlor.mydemo/unpacker
     ```
 
-5. 调用修复工具 dexfixer.jar, 两个参数, 第一个为dump文件目录(必须为有效路径), 第二个为重组后的DEX目录(不存在将会创建)
+5. Call the repair tool dexfixer.jar, two parameters, the first is the dump file directory (must be a valid path), the second is the reorganized DEX directory (will be created if it does not exist)
     ```bash
     java -jar dexfixer.jar /path/to/unpacker /path/to/output
     ```
@@ -198,7 +193,7 @@ FART: https://bbs.pediy.com/thread-252630.htm
 
 
 
-## 常见问题
+## Frequently Asked Questions
 
-1. dump中途退出或卡死，重新启动进程，再次等待脱壳即可
-2. 当前仅支持被壳保护的dex, 不支持App动态加载的dex/jar
+1. Dump quit or freeze halfway, restart the process, and wait for the shelling again
+2. Currently, only shell-protected dex is supported, and dex/jar dynamically loaded by the App is not supported
